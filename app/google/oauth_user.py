@@ -25,6 +25,8 @@ from app.google.sheets import GoogleSheetsClient
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="OAuth2 Google для Custom-CRM")
     parser.add_argument("--login", action="store_true", help="Выполнить вход через браузер")
+    parser.add_argument("--no-browser", action="store_true", help="Не открывать браузер автоматически")
+    parser.add_argument("--port", type=int, default=8765, help="Порт локального OAuth callback")
     parser.add_argument("--status", action="store_true", help="Показать статус OAuth2")
     parser.add_argument("--create-test", action="store_true", help="Создать тестовые Документ и Таблицу")
     parser.add_argument("--create-doc", metavar="TITLE", help="Создать Google Документ")
@@ -47,7 +49,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.login:
         try:
-            run_oauth_login(settings, port=8765, open_browser=True)
+            run_oauth_login(
+                settings,
+                port=args.port,
+                open_browser=not args.no_browser,
+            )
         except GoogleIntegrationError as exc:
             print(f"[ОШИБКА] {exc}", file=sys.stderr)
             return 1

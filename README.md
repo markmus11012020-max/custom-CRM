@@ -103,6 +103,8 @@ OAuth2 личного аккаунта:
   token.json создаётся после входа.
   Команда входа:
     python -m app.google.oauth_user --login
+  Без автоматического открытия браузера:
+    python -m app.google.oauth_user --login --no-browser
   Проверка статуса:
     python -m app.google.oauth_user --status
   Создание тестовых Документа и Таблицы:
