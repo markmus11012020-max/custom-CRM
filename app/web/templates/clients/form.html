@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Клиенты</div>
+    <h1>{{ title }}</h1>
+    <p class="muted">Карточка клиента проекта «{{ active_project.name }}».</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ '/clients/' ~ client.id if client else '/clients' }}">← Назад</a>
+</div>
+
+<form class="card form-card" method="post" action="{{ form_action }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label class="span-2">
+      <span>Имя клиента *</span>
+      <input type="text" name="name" value="{{ client.name if client else '' }}" required placeholder="Иван Петров">
+    </label>
+    <label>
+      <span>Компания</span>
+      <input type="text" name="company" value="{{ client.company if client else '' }}" placeholder="ООО Ромашка">
+    </label>
+    <label>
+      <span>Email</span>
+      <input type="email" name="email" value="{{ client.email if client else '' }}" placeholder="client@example.com">
+    </label>
+    <label>
+      <span>Телефон</span>
+      <input type="text" name="phone" value="{{ client.phone if client else '' }}" placeholder="+7 900 000-00-00">
+    </label>
+    <label>
+      <span>Статус</span>
+      <select name="status">
+        {% for value in ['new', 'active', 'inactive'] %}
+        <option value="{{ value }}" {% if (client.status if client else 'new') == value %}selected{% endif %}>{{ value|status_label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Источник</span>
+      <input type="text" name="source" value="{{ client.source if client else '' }}" placeholder="Сайт, рекомендация, конференция">
+    </label>
+    <label>
+      <span>Ответственный</span>
+      <select name="owner_id">
+        <option value="">Не назначен</option>
+        {% for item in users %}
+        <option value="{{ item.id }}" {% if client and client.owner_id == item.id %}selected{% elif not client and item.id == user.id %}selected{% endif %}>{{ item.full_name or item.email }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="span-2">
+      <span>Заметки</span>
+      <textarea name="notes" rows="4" placeholder="Контекст, договорённости, особенности">{{ client.notes if client else '' }}</textarea>
+    </label>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">{{ 'Сохранить' if client else 'Создать клиента' }}</button>
+    <a class="btn btn-ghost" href="{{ '/clients/' ~ client.id if client else '/clients' }}">Отмена</a>
+  </div>
+</form>
+{% endblock %}

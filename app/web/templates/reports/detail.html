@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Отчёт · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Отчёт · {{ active_project.name }}</div>
+    <h1>{{ report.report_type|report_type_label }}</h1>
+    <p class="muted">{{ report.created_at|datetime }} · {{ report.period_from|date }} — {{ report.period_to|date }}</p>
+  </div>
+  <div class="page-actions">
+    {% if report.spreadsheet_url %}<a class="btn btn-primary" href="{{ report.spreadsheet_url }}" target="_blank" rel="noopener">Открыть Google Таблицу</a>{% endif %}
+    <a class="btn btn-ghost" href="/reports">← К отчётам</a>
+  </div>
+</div>
+
+{% if report.error %}
+<div class="flash flash-warning">Google: {{ report.error }}</div>
+{% endif %}
+
+<section class="card">
+  <div class="card-head"><h2>AI-резюме</h2></div>
+  <div class="summary-text">{{ report.summary or 'Резюме не сформировано.' }}</div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Метаданные</h2></div>
+  <div class="detail-grid">
+    <div><span class="label">Статус</span><strong>{{ report.status }}</strong></div>
+    <div><span class="label">Автор</span><strong>{{ report.created_by.full_name if report.created_by else 'Система' }}</strong></div>
+    <div><span class="label">Период с</span><strong>{{ report.period_from|date }}</strong></div>
+    <div><span class="label">Период по</span><strong>{{ report.period_to|date }}</strong></div>
+    <div><span class="label">Ссылка</span><strong>{% if report.spreadsheet_url %}<a href="{{ report.spreadsheet_url }}" target="_blank" rel="noopener">Google Sheets</a>{% else %}—{% endif %}</strong></div>
+  </div>
+</section>
+{% endblock %}

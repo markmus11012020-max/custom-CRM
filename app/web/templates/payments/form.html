@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Платежи</div>
+    <h1>{{ title }}</h1>
+    <p class="muted">Счёт можно оплатить вручную или через Robokassa.</p>
+  </div>
+  <a class="btn btn-ghost" href="/payments">← Назад</a>
+</div>
+
+<form class="card form-card" method="post" action="{{ form_action }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label>
+      <span>Сумма, ₽ *</span>
+      <input type="number" name="amount" step="0.01" min="0.01" required value="{{ payment.amount if payment else '' }}" placeholder="150000">
+    </label>
+    <label>
+      <span>Метод</span>
+      <select name="method">
+        <option value="manual" {% if payment and payment.method == 'manual' %}selected{% endif %}>Вручную</option>
+        <option value="robokassa" {% if payment and payment.method == 'robokassa' %}selected{% endif %}>Robokassa</option>
+      </select>
+    </label>
+    <label>
+      <span>Клиент</span>
+      <select name="client_id">
+        <option value="">Без клиента</option>
+        {% for client in clients %}<option value="{{ client.id }}" {% if payment and payment.client_id == client.id %}selected{% endif %}>{{ client.name }}{% if client.company %} · {{ client.company }}{% endif %}</option>{% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Сделка</span>
+      <select name="deal_id">
+        <option value="">Без сделки</option>
+        {% for deal in deals %}<option value="{{ deal.id }}" {% if payment and payment.deal_id == deal.id %}selected{% endif %}>{{ deal.title }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="span-2">
+      <span>Назначение</span>
+      <input type="text" name="description" value="{{ payment.description if payment else '' }}" placeholder="Оплата внедрения CRM">
+    </label>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Создать счёт</button>
+    <a class="btn btn-ghost" href="/payments">Отмена</a>
+  </div>
+</form>
+{% endblock %}

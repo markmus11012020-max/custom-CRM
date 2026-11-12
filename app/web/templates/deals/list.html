@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "macros.html" import deal_badge, pagination, money %}
+{% block title %}Сделки · {{ app_name }}{% endblock %}
+{% block content %}
+{% set can_edit = user.role in ['admin', 'manager'] %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Продажи</div>
+    <h1>Сделки и заказы</h1>
+    <p class="muted">Воронка проекта «{{ active_project.name }}».</p>
+  </div>
+  {% if can_edit %}<a class="btn btn-primary" href="/deals/new">+ Новая сделка</a>{% endif %}
+</div>
+
+<form class="card filter-bar" method="get" action="/deals">
+  <input type="search" name="q" value="{{ q }}" placeholder="Название сделки или клиент...">
+  <select name="stage">
+    <option value="">Все этапы</option>
+    {% for value, label in stage_options.items() %}<option value="{{ value }}" {% if stage == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="kind">
+    <option value="">Все типы</option>
+    {% for value, label in kind_options.items() %}<option value="{{ value }}" {% if kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit">Фильтровать</button>
+  <a class="btn btn-ghost" href="/deals">Сбросить</a>
+</form>
+
+<section class="card">
+  {% if deals %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Сделка</th><th>Клиент</th><th>Тип</th><th>Этап</th><th class="right">Сумма</th><th>Создана</th></tr></thead>
+    <tbody>{% for deal in deals %}<tr>
+      <td><a href="/deals/{{ deal.id }}"><strong>{{ deal.title }}</strong></a><small class="muted block">{{ deal.description|truncate(70) }}</small></td>
+      <td class="muted">{{ deal.client.name if deal.client else 'Без клиента' }}</td>
+      <td>{{ deal.kind|kind_label }}</td>
+      <td>{{ deal_badge(deal.stage) }}</td>
+      <td class="right"><strong>{{ money(deal.amount) }}</strong></td>
+      <td class="muted">{{ deal.created_at|date }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {{ pagination(page, per_page, total) }}
+  {% else %}
+  <div class="empty-state"><div class="empty-icon">◫</div><p>Сделок пока нет</p>{% if can_edit %}<a class="btn btn-primary" href="/deals/new">Создать первую сделку</a>{% endif %}</div>
+  {% endif %}
+</section>
+{% endblock %}

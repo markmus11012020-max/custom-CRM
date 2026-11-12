@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "macros.html" import payment_badge, money %}
+{% block title %}Счёт №{{ payment.id }} · {{ app_name }}{% endblock %}
+{% block content %}
+{% set can_edit = user.role in ['admin', 'manager'] %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Счёт · {{ active_project.name }}</div>
+    <h1>Счёт №{{ payment.id }}</h1>
+    <p class="muted">{{ payment.description or 'Без описания' }} · {{ payment_badge(payment.status) }}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="/payments/{{ payment.id }}/invoice">Печать счёта</a>
+    {% if can_edit and payment.status == 'pending' %}
+    <form method="post" action="/payments/{{ payment.id }}/mark-paid" data-confirm="Отметить счёт оплаченным?"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="btn btn-primary" type="submit">Оплачен</button></form>
+    {% endif %}
+    {% if can_edit and payment.status == 'paid' %}
+    <form method="post" action="/payments/{{ payment.id }}/refund" data-confirm="Оформить возврат?"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="btn btn-ghost" type="submit">Возврат</button></form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2-1">
+  <section class="card">
+    <div class="card-head"><h2>Данные счёта</h2></div>
+    <div class="detail-grid">
+      <div><span class="label">Сумма</span><strong class="big">{{ money(payment.amount) }}</strong></div>
+      <div><span class="label">Валюта</span><strong>{{ payment.currency }}</strong></div>
+      <div><span class="label">Клиент</span><strong>{% if payment.client %}<a href="/clients/{{ payment.client.id }}">{{ payment.client.name }}</a>{% else %}—{% endif %}</strong></div>
+      <div><span class="label">Сделка</span><strong>{% if payment.deal %}<a href="/deals/{{ payment.deal.id }}">{{ payment.deal.title }}</a>{% else %}—{% endif %}</strong></div>
+      <div><span class="label">Метод</span><strong>{{ 'Robokassa' if payment.method == 'robokassa' else 'Вручную' }}</strong></div>
+      <div><span class="label">InvId</span><strong>{{ payment.inv_id or '—' }}</strong></div>
+      <div><span class="label">Создан</span><strong>{{ payment.created_at|datetime }}</strong></div>
+      <div><span class="label">Оплачен</span><strong>{{ payment.paid_at|datetime }}</strong></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Оплата</h2></div>
+    {% if payment.robokassa_link %}
+    <p class="muted">Ссылка Robokassa сформирована. В тестовом режиме реальное списание не производится.</p>
+    <a class="btn btn-primary btn-block" href="{{ payment.robokassa_link }}" target="_blank" rel="noopener">Перейти к оплате</a>
+    <div class="code-box">{{ payment.robokassa_link }}</div>
+    {% else %}
+    <div class="empty-state small"><p>Ссылка Robokassa не создана. Используйте ручную отметку оплаты.</p></div>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Действия</h2></div>
+  <div class="button-row">
+    {% if can_edit %}
+    <form method="post" action="/payments/{{ payment.id }}/delete" data-confirm="Удалить счёт?"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="btn btn-ghost text-danger" type="submit">Удалить счёт</button></form>
+    {% endif %}
+    <a class="btn btn-ghost" href="/payments">К списку платежей</a>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Сделки</div>
+    <h1>{{ title }}</h1>
+    <p class="muted">Проект «{{ active_project.name }}».</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ '/deals/' ~ deal.id if deal else '/deals' }}">← Назад</a>
+</div>
+
+<form class="card form-card" method="post" action="{{ form_action }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label class="span-2">
+      <span>Название *</span>
+      <input type="text" name="title" value="{{ deal.title if deal else '' }}" required placeholder="Внедрение CRM">
+    </label>
+    <label>
+      <span>Клиент</span>
+      <select name="client_id">
+        <option value="">Без клиента</option>
+        {% for client in clients %}
+        <option value="{{ client.id }}" {% if selected_client_id == client.id %}selected{% endif %}>{{ client.name }}{% if client.company %} · {{ client.company }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Тип</span>
+      <select name="kind">
+        {% for value, label in kind_options.items() %}<option value="{{ value }}" {% if (deal.kind if deal else 'deal') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Сумма, ₽</span>
+      <input type="number" name="amount" step="0.01" min="0" value="{{ deal.amount if deal else '0' }}">
+    </label>
+    <label>
+      <span>Этап</span>
+      <select name="stage">
+        {% for value, label in stage_options.items() %}<option value="{{ value }}" {% if (deal.stage if deal else 'new') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Ответственный</span>
+      <select name="owner_id">
+        <option value="">Не назначен</option>
+        {% for item in users %}<option value="{{ item.id }}" {% if deal and deal.owner_id == item.id %}selected{% elif not deal and item.id == user.id %}selected{% endif %}>{{ item.full_name or item.email }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="span-2">
+      <span>Описание</span>
+      <textarea name="description" rows="4" placeholder="Что входит в сделку, договорённости, следующий шаг">{{ deal.description if deal else '' }}</textarea>
+    </label>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">{{ 'Сохранить' if deal else 'Создать сделку' }}</button>
+    <a class="btn btn-ghost" href="{{ '/deals/' ~ deal.id if deal else '/deals' }}">Отмена</a>
+  </div>
+</form>
+{% endblock %}

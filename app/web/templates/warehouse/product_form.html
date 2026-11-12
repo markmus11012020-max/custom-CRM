@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Склад</div>
+    <h1>{{ title }}</h1>
+    <p class="muted">Остаток меняется только через складские операции.</p>
+  </div>
+  <a class="btn btn-ghost" href="/warehouse">← Назад</a>
+</div>
+
+<form class="card form-card" method="post" action="{{ form_action }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label class="span-2"><span>Название *</span><input type="text" name="name" value="{{ product.name if product else '' }}" required placeholder="Разработка модуля"></label>
+    <label><span>SKU</span><input type="text" name="sku" value="{{ product.sku if product else '' }}" placeholder="MODULE"></label>
+    <label><span>Единица</span><input type="text" name="unit" value="{{ product.unit if product else 'шт' }}"></label>
+    <label><span>Цена продажи, ₽</span><input type="number" name="price" step="0.01" min="0" value="{{ product.price if product else '0' }}"></label>
+    <label><span>Себестоимость, ₽</span><input type="number" name="cost" step="0.01" min="0" value="{{ product.cost if product else '0' }}"></label>
+    <label><span>Минимальный остаток</span><input type="number" name="min_stock" step="0.001" min="0" value="{{ product.min_stock if product else '0' }}"></label>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">{{ 'Сохранить' if product else 'Создать товар' }}</button>
+    <a class="btn btn-ghost" href="/warehouse">Отмена</a>
+  </div>
+</form>
+{% endblock %}

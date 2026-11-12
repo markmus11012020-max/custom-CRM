@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% from "macros.html" import deal_badge, payment_badge, task_badge, money %}
+{% block title %}{{ deal.title }} · {{ app_name }}{% endblock %}
+{% block content %}
+{% set can_edit = user.role in ['admin', 'manager'] %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">{{ deal.kind|kind_label }} · {{ active_project.name }}</div>
+    <h1>{{ deal.title }}</h1>
+    <p class="muted">{{ deal.client.name if deal.client else 'Без клиента' }} · {{ deal_badge(deal.stage) }}</p>
+  </div>
+  <div class="page-actions">
+    {% if can_edit %}
+    <a class="btn btn-primary" href="/deals/{{ deal.id }}/edit">Редактировать</a>
+    <form method="post" action="/deals/{{ deal.id }}/google-doc"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="btn btn-secondary" type="submit">Google Документ</button></form>
+    {% if deal.kind == 'order' %}<form method="post" action="/deals/{{ deal.id }}/fulfill" data-confirm="Списать товары со склада и выполнить заказ?"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="btn btn-secondary" type="submit">Выполнить заказ</button></form>{% endif %}
+    <form method="post" action="/deals/{{ deal.id }}/archive" data-confirm="Закрыть сделку как проигранную?"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="btn btn-ghost" type="submit">Закрыть</button></form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stat-strip">
+  <div><span>Сумма</span><strong>{{ money(deal.amount) }}</strong></div>
+  <div><span>Позиции</span><strong>{{ deal.items|length }}</strong></div>
+  <div><span>Оплачено</span><strong>{{ money(deal.payments|selectattr('status', 'equalto', 'paid')|sum(attribute='amount')) }}</strong></div>
+  <div><span>Задачи</span><strong>{{ deal.tasks|rejectattr('is_completed')|list|length }}</strong></div>
+</div>
+
+<div class="grid-2-1">
+  <section class="card">
+    <div class="card-head"><h2>Параметры</h2></div>
+    <div class="detail-grid">
+      <div><span class="label">Клиент</span><strong>{% if deal.client %}<a href="/clients/{{ deal.client.id }}">{{ deal.client.name }}</a>{% else %}—{% endif %}</strong></div>
+      <div><span class="label">Тип</span><strong>{{ deal.kind|kind_label }}</strong></div>
+      <div><span class="label">Ответственный</span><strong>{{ deal.owner.full_name if deal.owner else '—' }}</strong></div>
+      <div><span class="label">Создана</span><strong>{{ deal.created_at|datetime }}</strong></div>
+      <div><span class="label">Выполнена</span><strong>{{ deal.fulfilled_at|datetime }}</strong></div>
+      <div><span class="label">Валюта</span><strong>{{ deal.currency }}</strong></div>
+    </div>
+    {% if deal.description %}<div class="notes-block"><span class="label">Описание</span><p>{{ deal.description }}</p></div>{% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Этап</h2></div>
+    {% if can_edit %}
+    <form method="post" action="/deals/{{ deal.id }}/stage" class="stack">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <select name="stage" onchange="this.form.submit()">
+        {% for value, label in stage_options.items() %}<option value="{{ value }}" {% if deal.stage == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </form>
+    {% endif %}
+    <div class="mini-summary">
+      <div><span>Не оплачено</span><strong>{{ money(deal.amount - deal.payments|selectattr('status', 'equalto', 'paid')|sum(attribute='amount')) }}</strong></div>
+      <div><span>Счетов</span><strong>{{ deal.payments|length }}</strong></div>
+    </div>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Позиции заказа</h2><span class="count">{{ deal.items|length }}</span></div>
+  {% if deal.items %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Наименование</th><th>Товар</th><th class="right">Количество</th><th class="right">Цена</th><th class="right">Сумма</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+    <tbody>{% for item in deal.items %}<tr>
+      <td>{{ item.name }}</td>
+      <td class="muted">{{ item.product.name if item.product else 'Вручную' }}</td>
+      <td class="right">{{ item.quantity }}</td>
+      <td class="right">{{ money(item.unit_price) }}</td>
+      <td class="right"><strong>{{ money(item.total) }}</strong></td>
+      {% if can_edit %}<td class="right"><form method="post" action="/deals/{{ deal.id }}/items/{{ item.id }}/delete" data-confirm="Удалить позицию?"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="icon-btn" type="submit">×</button></form></td>{% endif %}
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty-state small"><p>В заказе пока нет позиций</p></div>{% endif %}
+
+  {% if can_edit %}
+  <form class="inline-form" method="post" action="/deals/{{ deal.id }}/items">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <select name="product_id">
+      <option value="">Товар вручную</option>
+      {% for product in products %}<option value="{{ product.id }}">{{ product.name }} · {{ money(product.price) }}</option>{% endfor %}
+    </select>
+    <input type="text" name="name" placeholder="Название позиции">
+    <input type="number" name="quantity" step="0.001" min="0.001" value="1" placeholder="Кол-во">
+    <input type="number" name="unit_price" step="0.01" min="0" value="0" placeholder="Цена">
+    <button class="btn btn-secondary" type="submit">Добавить</button>
+  </form>
+  {% endif %}
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Счета</h2></div>
+    {% if deal.payments %}
+    <div class="simple-list">
+      {% for payment in deal.payments|sort(attribute='created_at', reverse=true) %}
+      <div class="simple-row">
+        <span><a href="/payments/{{ payment.id }}"><strong>{{ money(payment.amount) }}</strong></a><small>{{ payment.description or 'Без описания' }}</small></span>
+        {{ payment_badge(payment.status) }}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty-state small"><p>Счетов пока нет</p></div>{% endif %}
+    {% if can_edit %}
+    <form class="inline-form wrap" method="post" action="/deals/{{ deal.id }}/payment">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <input type="number" name="amount" step="0.01" min="0.01" value="{{ deal.amount }}" placeholder="Сумма">
+      <input type="text" name="description" placeholder="Назначение">
+      <select name="method"><option value="manual">Вручную</option><option value="robokassa">Robokassa</option></select>
+      <button class="btn btn-secondary" type="submit">Выставить счёт</button>
+    </form>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Задачи</h2><a class="link" href="/tasks/new?deal_id={{ deal.id }}">+ Задача</a></div>
+    {% if deal.tasks %}
+    <div class="simple-list">
+      {% for task in deal.tasks|sort(attribute='created_at', reverse=true) %}
+      <div class="simple-row {% if task.due_at|is_overdue and not task.is_completed %}row-danger{% endif %}">
+        <span><a href="/tasks/{{ task.id }}/edit"><strong>{{ task.title }}</strong></a><small>{{ task.due_at|datetime }} · {{ task.priority|priority_label }}</small></span>
+        {{ task_badge(task) }}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty-state small"><p>Задач пока нет</p></div>{% endif %}
+  </section>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Google-файлы</h2></div>
+    {% if files %}
+    <div class="simple-list">{% for file in files %}<div class="simple-row"><span><a href="{{ file.web_url }}" target="_blank" rel="noopener"><strong>{{ file.name }}</strong></a><small>{{ file.mime_type }}</small></span><small class="muted">{{ file.created_at|date }}</small></div>{% endfor %}</div>
+    {% else %}<div class="empty-state small"><p>Файлов ещё нет</p></div>{% endif %}
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>История</h2></div>
+    {% if activity %}
+    <div class="timeline compact">{% for item in activity %}<div class="timeline-item"><span class="timeline-dot"></span><div><strong>{{ item.action }}</strong><span class="muted">{{ item.details }}</span></div><small class="muted">{{ item.created_at|datetime }}</small></div>{% endfor %}</div>
+    {% else %}<div class="empty-state small"><p>Событий пока нет</p></div>{% endif %}
+  </section>
+</div>
+{% endblock %}

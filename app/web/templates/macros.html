@@ -1,0 +1,58 @@
+{% macro csrf(token) -%}
+<input type="hidden" name="_csrf" value="{{ token }}">
+{%- endmacro %}
+
+{% macro badge(text, tone='neutral') -%}
+<span class="badge badge-{{ tone }}">{{ text }}</span>
+{%- endmacro %}
+
+{% macro client_badge(status) -%}
+{% set tones = {'new':'info','active':'success','inactive':'muted','archived':'muted'} %}
+{{ badge(status|status_label, tones.get(status, 'neutral')) }}
+{%- endmacro %}
+
+{% macro deal_badge(stage) -%}
+{% set tones = {'new':'info','negotiation':'warning','proposal':'primary','won':'success','lost':'danger','fulfilled':'success'} %}
+{{ badge(stage|stage_label, tones.get(stage, 'neutral')) }}
+{%- endmacro %}
+
+{% macro payment_badge(status) -%}
+{% set tones = {'pending':'warning','paid':'success','failed':'danger','refunded':'muted','canceled':'muted'} %}
+{{ badge(status|status_label, tones.get(status, 'neutral')) }}
+{%- endmacro %}
+
+{% macro task_badge(task) -%}
+{% if task.is_completed %}
+{{ badge('Выполнена', 'success') }}
+{% elif task.due_at|is_overdue %}
+{{ badge('Просрочена', 'danger') }}
+{% else %}
+{{ badge('Открыта', 'info') }}
+{% endif %}
+{%- endmacro %}
+
+{% macro pagination(page, per_page, total) -%}
+{% set pages = ((total + per_page - 1) // per_page)|int %}
+{% if pages > 1 %}
+<nav class="pagination">
+  {% if page > 1 %}
+  <a class="page-link" href="{{ request.url.include_query_params(page=page-1) }}">← Назад</a>
+  {% endif %}
+  <span class="page-info">Страница {{ page }} из {{ pages }} · всего {{ total }}</span>
+  {% if page < pages %}
+  <a class="page-link" href="{{ request.url.include_query_params(page=page+1) }}">Вперёд →</a>
+  {% endif %}
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro empty(text='Пока нет данных') -%}
+<div class="empty-state">
+  <div class="empty-icon">◇</div>
+  <p>{{ text }}</p>
+</div>
+{%- endmacro %}
+
+{% macro money(value) -%}
+{{ value|money }}
+{%- endmacro %}

@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% from "macros.html" import badge, client_badge, deal_badge, money %}
+{% block title %}Дашборд · {{ app_name }}{% endblock %}
+{% block content %}
+{% set can_edit = user.role in ['admin', 'manager'] %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Обзор проекта</div>
+    <h1>{{ active_project.name }}</h1>
+    <p class="muted">{{ active_project.description or 'Оперативная сводка по клиентам, сделкам, задачам и финансам.' }}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="/clients/new">+ Клиент</a>
+    <a class="btn btn-secondary" href="/deals/new">+ Сделка</a>
+    <a class="btn btn-secondary" href="/tasks/new">+ Задача</a>
+    <a class="btn btn-ghost" href="/payments/new">+ Счёт</a>
+  </div>
+</div>
+
+<section class="kpi-grid">
+  <article class="card kpi-card">
+    <div class="kpi-icon kpi-indigo">◎</div>
+    <div>
+      <span class="kpi-label">Клиенты</span>
+      <strong class="kpi-value">{{ stats.clients_total }}</strong>
+      <small class="muted">{{ stats.clients_active }} активных · {{ stats.clients_new }} новых</small>
+    </div>
+  </article>
+  <article class="card kpi-card">
+    <div class="kpi-icon kpi-teal">◫</div>
+    <div>
+      <span class="kpi-label">Сделки в работе</span>
+      <strong class="kpi-value">{{ stats.deals_open }}</strong>
+      <small class="muted">Воронка {{ money(stats.pipeline_value) }}</small>
+    </div>
+  </article>
+  <article class="card kpi-card">
+    <div class="kpi-icon kpi-green">₽</div>
+    <div>
+      <span class="kpi-label">Прибыль</span>
+      <strong class="kpi-value">{{ money(stats.profit) }}</strong>
+      <small class="muted">{{ money(stats.income) }} доход · {{ money(stats.expense) }} расход</small>
+    </div>
+  </article>
+  <article class="card kpi-card">
+    <div class="kpi-icon kpi-amber">!</div>
+    <div>
+      <span class="kpi-label">Задачи</span>
+      <strong class="kpi-value">{{ stats.tasks_open }}</strong>
+      <small class="muted {% if stats.tasks_overdue %}text-danger{% endif %}">{{ stats.tasks_overdue }} просрочено · {{ stats.tasks_today }} сегодня</small>
+    </div>
+  </article>
+</section>
+
+<div class="grid-2-1">
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Воронка продаж</h2>
+        <p class="muted">Сумма сделок по этапам</p>
+      </div>
+      <a href="/deals" class="link">Все сделки →</a>
+    </div>
+    <div class="funnel-list">
+      {% for item in funnel %}
+      <div class="funnel-row">
+        <div class="funnel-meta">
+          <span>{{ item.label }}</span>
+          <strong>{{ money(item.amount) }}</strong>
+        </div>
+        <div class="progress-track">
+          <div class="progress-bar progress-{{ item.stage }}" style="width: {{ (item.amount / (stats.pipeline_value if stats.pipeline_value > 0 else 1) * 100)|round(1) }}%"></div>
+        </div>
+        <span class="funnel-count">{{ item.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Финансы</h2>
+      <a href="/accounting" class="link">Учёт →</a>
+    </div>
+    <div class="finance-stack">
+      <div class="finance-row"><span>Доходы</span><strong class="text-success">{{ money(stats.income) }}</strong></div>
+      <div class="finance-row"><span>Расходы</span><strong class="text-danger">{{ money(stats.expense) }}</strong></div>
+      <div class="finance-row total"><span>Прибыль</span><strong>{{ money(stats.profit) }}</strong></div>
+      <div class="finance-row"><span>Ожидает оплаты</span><strong>{{ money(stats.payments_pending) }}</strong></div>
+      <div class="finance-row"><span>Стоимость склада</span><strong>{{ money(stats.stock_value) }}</strong></div>
+    </div>
+    <div class="mini-chart">
+      <canvas id="financeChart" height="140"></canvas>
+    </div>
+  </section>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head">
+      <h2>Задачи на контроле</h2>
+      <a href="/tasks" class="link">Все задачи →</a>
+    </div>
+    {% if tasks %}
+    <div class="task-list">
+      {% for task in tasks %}
+      <div class="task-row {% if task.due_at|is_overdue %}task-overdue{% endif %}">
+        <form method="post" action="/tasks/{{ task.id }}/toggle" class="task-toggle">
+          <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+          <button type="submit" class="check" aria-label="Выполнить">✓</button>
+        </form>
+        <div class="task-main">
+          <strong>{{ task.title }}</strong>
+          <span class="muted">
+            {{ task.client.name if task.client else 'Без клиента' }}
+            {% if task.deal %} · {{ task.deal.title }}{% endif %}
+          </span>
+        </div>
+        <div class="task-meta">
+          {{ badge(task.priority|priority_label, 'warning' if task.priority in ['high','urgent'] else 'muted') }}
+          <small class="{% if task.due_at|is_overdue %}text-danger{% endif %}">{{ task.due_at|datetime }}</small>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">✓</div><p>Открытых задач нет</p></div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Последние сделки</h2>
+      <a href="/deals/new" class="link">Создать →</a>
+    </div>
+    {% if deals %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Сделка</th><th>Клиент</th><th>Этап</th><th class="right">Сумма</th></tr></thead>
+        <tbody>
+        {% for deal in deals %}
+          <tr>
+            <td><a href="/deals/{{ deal.id }}">{{ deal.title }}</a></td>
+            <td class="muted">{{ deal.client.name if deal.client else '—' }}</td>
+            <td>{{ deal_badge(deal.stage) }}</td>
+            <td class="right">{{ money(deal.amount) }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">◫</div><p>Сделок пока нет</p></div>
+    {% endif %}
+  </section>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head">
+      <h2>Новые клиенты</h2>
+      <a href="/clients" class="link">Все клиенты →</a>
+    </div>
+    {% if clients %}
+    <div class="client-grid">
+      {% for client in clients %}
+      <a class="client-mini" href="/clients/{{ client.id }}">
+        <span class="avatar">{{ client.name|initials }}</span>
+        <span><strong>{{ client.name }}</strong><small>{{ client.company or '—' }}</small></span>
+        {{ client_badge(client.status) }}
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">◎</div><p>Клиентов пока нет</p></div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Низкий остаток</h2>
+      <a href="/warehouse" class="link">Склад →</a>
+    </div>
+    {% if low_stock %}
+    <div class="simple-list">
+      {% for product in low_stock %}
+      <div class="simple-row">
+        <span><strong>{{ product.name }}</strong><small>{{ product.sku or '—' }}</small></span>
+        <span class="text-danger">{{ product.stock_qty }} / {{ product.min_stock }} {{ product.unit }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">▦</div><p>Все остатки в норме</p></div>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Последние события</h2>
+    <a href="/admin/activity" class="link">Журнал →</a>
+  </div>
+  {% if activity %}
+  <div class="timeline">
+    {% for item in activity %}
+    <div class="timeline-item">
+      <span class="timeline-dot"></span>
+      <div>
+        <strong>{{ item.action }}</strong>
+        <span class="muted">{{ item.details }}</span>
+      </div>
+      <small class="muted">{{ item.created_at|datetime }}</small>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state"><div class="empty-icon">◷</div><p>Событий пока нет</p></div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/vendor/chart.umd.js"></script>
+<script>
+  const funnelLabels = [{% for item in funnel %}"{{ item.label }}"{% if not loop.last %},{% endif %}{% endfor %}];
+  const funnelValues = [{% for item in funnel %}{{ item.amount|float }}{% if not loop.last %},{% endif %}{% endfor %}];
+  const monthLabels = [{% for item in monthly %}"{{ item.month }}"{% if not loop.last %},{% endif %}{% endfor %}];
+  const monthIncome = [{% for item in monthly %}{{ item.income|float }}{% if not loop.last %},{% endif %}{% endfor %}];
+  const monthExpense = [{% for item in monthly %}{{ item.expense|float }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+  const indigo = '#4338CA';
+  const teal = '#0D9488';
+  const red = '#DC2626';
+
+  if (window.Chart) {
+    const funnelCanvas = document.getElementById('funnelChart');
+    if (funnelCanvas) {
+      new Chart(funnelCanvas, {
+        type: 'bar',
+        data: { labels: funnelLabels, datasets: [{ label: 'Сумма', data: funnelValues, backgroundColor: indigo, borderRadius: 6 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+    const financeCanvas = document.getElementById('financeChart');
+    if (financeCanvas) {
+      new Chart(financeCanvas, {
+        type: 'bar',
+        data: {
+          labels: monthLabels.length ? monthLabels : ['Нет данных'],
+          datasets: [
+            { label: 'Доход', data: monthIncome.length ? monthIncome : [0], backgroundColor: teal, borderRadius: 4 },
+            { label: 'Расход', data: monthExpense.length ? monthExpense : [0], backgroundColor: red, borderRadius: 4 }
+          ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+  }
+</script>
+{% endblock %}

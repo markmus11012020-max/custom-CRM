@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "macros.html" import task_badge, pagination %}
+{% block title %}Задачи · {{ app_name }}{% endblock %}
+{% block content %}
+{% set can_edit = user.role in ['admin', 'manager'] %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Дисциплина</div>
+    <h1>Задачи</h1>
+    <p class="muted">Контроль сроков и следующих шагов по проекту «{{ active_project.name }}».</p>
+  </div>
+  {% if can_edit %}<a class="btn btn-primary" href="/tasks/new">+ Новая задача</a>{% endif %}
+</div>
+
+<form class="card filter-bar" method="get" action="/tasks">
+  <input type="search" name="q" value="{{ q }}" placeholder="Название или клиент...">
+  <select name="bucket">
+    <option value="">Все сроки</option>
+    <option value="overdue" {% if bucket == 'overdue' %}selected{% endif %}>Просрочено</option>
+    <option value="today" {% if bucket == 'today' %}selected{% endif %}>Сегодня</option>
+    <option value="future" {% if bucket == 'future' %}selected{% endif %}>Будущие</option>
+    <option value="none" {% if bucket == 'none' %}selected{% endif %}>Без срока</option>
+  </select>
+  <select name="assigned_to">
+    <option value="">Все исполнители</option>
+    {% for item in users %}<option value="{{ item.id }}" {% if assigned_to == item.id|string %}selected{% endif %}>{{ item.full_name or item.email }}</option>{% endfor %}
+  </select>
+  <label class="inline-check"><input type="checkbox" name="completed" value="true" {% if completed %}checked{% endif %}> Выполненные</label>
+  <button class="btn btn-secondary" type="submit">Фильтровать</button>
+  <a class="btn btn-ghost" href="/tasks">Сбросить</a>
+</form>
+
+<section class="card">
+  {% if tasks %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th class="w-check"></th><th>Задача</th><th>Связь</th><th>Исполнитель</th><th>Приоритет</th><th>Срок</th><th></th></tr></thead>
+    <tbody>{% for task in tasks %}<tr class="{% if task.due_at|is_overdue and not task.is_completed %}row-danger{% elif task.is_completed %}row-muted{% endif %}">
+      <td>
+        {% if can_edit %}
+        <form method="post" action="/tasks/{{ task.id }}/toggle"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="check {% if task.is_completed %}checked{% endif %}" type="submit">✓</button></form>
+        {% endif %}
+      </td>
+      <td><a href="{{ '/tasks/' ~ task.id ~ '/edit' if can_edit else '/tasks' }}"><strong>{{ task.title }}</strong></a><small class="muted block">{{ task.description|truncate(80) }}</small></td>
+      <td class="muted">{% if task.client %}<a href="/clients/{{ task.client.id }}">{{ task.client.name }}</a>{% endif %}{% if task.deal %}<span class="block">{{ task.deal.title }}</span>{% endif %}{% if not task.client and not task.deal %}—{% endif %}</td>
+      <td class="muted">{{ task.assigned_to.full_name if task.assigned_to else '—' }}</td>
+      <td>{{ task.priority|priority_label }}</td>
+      <td class="{% if task.due_at|is_overdue and not task.is_completed %}text-danger{% endif %}">{{ task.due_at|datetime }}</td>
+      <td class="right">{% if can_edit %}<form method="post" action="/tasks/{{ task.id }}/delete" data-confirm="Удалить задачу?"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="icon-btn" type="submit">×</button></form>{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {{ pagination(page, per_page, total) }}
+  {% else %}
+  <div class="empty-state"><div class="empty-icon">✓</div><p>Задач по выбранному фильтру нет</p>{% if can_edit %}<a class="btn btn-primary" href="/tasks/new">Создать задачу</a>{% endif %}</div>
+  {% endif %}
+</section>
+{% endblock %}

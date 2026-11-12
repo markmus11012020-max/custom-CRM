@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Задачи</div>
+    <h1>{{ title }}</h1>
+    <p class="muted">Свяжите задачу с клиентом, сделкой или оставьте на уровне проекта.</p>
+  </div>
+  <a class="btn btn-ghost" href="/tasks">← Назад</a>
+</div>
+
+<form class="card form-card" method="post" action="{{ form_action }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label class="span-2">
+      <span>Название *</span>
+      <input type="text" name="title" value="{{ task.title if task else '' }}" required placeholder="Позвонить клиенту и уточнить бюджет">
+    </label>
+    <label>
+      <span>Клиент</span>
+      <select name="client_id">
+        <option value="">Без клиента</option>
+        {% for client in clients %}<option value="{{ client.id }}" {% if selected_client_id == client.id %}selected{% endif %}>{{ client.name }}{% if client.company %} · {{ client.company }}{% endif %}</option>{% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Сделка</span>
+      <select name="deal_id">
+        <option value="">Без сделки</option>
+        {% for deal in deals %}<option value="{{ deal.id }}" {% if selected_deal_id == deal.id %}selected{% endif %}>{{ deal.title }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Срок</span>
+      <input type="datetime-local" name="due_date" value="{{ task.due_at.strftime('%Y-%m-%dT%H:%M') if task and task.due_at else '' }}">
+    </label>
+    <label>
+      <span>Приоритет</span>
+      <select name="priority">
+        {% for value, label in priority_options.items() %}<option value="{{ value }}" {% if (task.priority if task else 'normal') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Исполнитель</span>
+      <select name="assigned_to">
+        <option value="">Не назначен</option>
+        {% for item in users %}<option value="{{ item.id }}" {% if task and task.assigned_to_id == item.id %}selected{% elif not task and item.id == user.id %}selected{% endif %}>{{ item.full_name or item.email }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="span-2">
+      <span>Описание</span>
+      <textarea name="description" rows="4" placeholder="Детали, чек-лист, ожидаемый результат">{{ task.description if task else '' }}</textarea>
+    </label>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">{{ 'Сохранить' if task else 'Создать задачу' }}</button>
+    <a class="btn btn-ghost" href="/tasks">Отмена</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Проекты · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">Администрирование</div><h1>Проекты</h1><p class="muted">Мультипроектность и доступы команды.</p></div>
+  <a class="btn btn-primary" href="/admin/projects/new">+ Проект</a>
+</div>
+<section class="card">
+  {% if projects %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Проект</th><th>Код</th><th>Владелец</th><th>Участники</th><th>Валюта</th><th>Статус</th><th></th></tr></thead>
+    <tbody>{% for project in projects %}<tr class="{% if project.is_archived %}row-muted{% endif %}">
+      <td><strong>{{ project.name }}</strong><small class="muted block">{{ project.description|truncate(80) }}</small></td>
+      <td><code>{{ project.code }}</code></td>
+      <td class="muted">{{ project.owner.full_name if project.owner else '—' }}</td>
+      <td>{{ project.members|length }}</td>
+      <td>{{ project.currency }}</td>
+      <td>{{ 'архив' if project.is_archived else 'активен' }}</td>
+      <td class="right"><a class="btn btn-ghost btn-sm" href="/admin/projects/{{ project.id }}/edit">Изменить</a></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty-state"><div class="empty-icon">◱</div><p>Проектов нет</p></div>{% endif %}
+</section>
+{% endblock %}

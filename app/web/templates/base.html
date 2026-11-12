@@ -1,0 +1,116 @@
+{% from "macros.html" import csrf %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="app-shell" x-data="{ sidebarOpen: false }">
+  <div class="mobile-backdrop" x-show="sidebarOpen" @click="sidebarOpen=false" x-cloak></div>
+  <aside class="sidebar" :class="{ 'sidebar-open': sidebarOpen }">
+    <div class="brand">
+      <a href="/" class="brand-link">
+        <span class="brand-mark">A</span>
+        <span class="brand-text">
+          <strong>Custom-CRM</strong>
+          <small>Aillix edition</small>
+        </span>
+      </a>
+      <button class="mobile-close" @click="sidebarOpen=false" type="button">×</button>
+    </div>
+
+    {% if projects %}
+    <form method="post" action="/project/switch" class="project-switcher">
+      {{ csrf(csrf_token) }}
+      <input type="hidden" name="next" value="{{ request.url.path }}">
+      <label for="project_id">Активный проект</label>
+      <select name="project_id" id="project_id" onchange="this.form.submit()">
+        {% for project in projects %}
+        <option value="{{ project.id }}" {% if active_project and project.id == active_project.id %}selected{% endif %}>{{ project.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
+
+    <nav class="nav">
+      <div class="nav-label">Работа</div>
+      <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/"><span>◈</span> Дашборд</a>
+      <a class="nav-link {% if request.url.path.startswith('/clients') %}active{% endif %}" href="/clients"><span>◎</span> Клиенты</a>
+      <a class="nav-link {% if request.url.path.startswith('/deals') %}active{% endif %}" href="/deals"><span>◫</span> Сделки</a>
+      <a class="nav-link {% if request.url.path.startswith('/tasks') %}active{% endif %}" href="/tasks"><span>✓</span> Задачи</a>
+      <a class="nav-link {% if request.url.path.startswith('/payments') %}active{% endif %}" href="/payments"><span>₽</span> Платежи</a>
+      <a class="nav-link {% if request.url.path.startswith('/warehouse') %}active{% endif %}" href="/warehouse"><span>▦</span> Склад</a>
+      <a class="nav-link {% if request.url.path.startswith('/accounting') %}active{% endif %}" href="/accounting"><span>≡</span> Учёт</a>
+      <a class="nav-link {% if request.url.path.startswith('/reports') %}active{% endif %}" href="/reports"><span>↗</span> Отчёты</a>
+
+      {% if user.role == 'admin' %}
+      <div class="nav-label">Администрирование</div>
+      <a class="nav-link {% if request.url.path.startswith('/admin/users') %}active{% endif %}" href="/admin/users"><span>♙</span> Пользователи</a>
+      <a class="nav-link {% if request.url.path.startswith('/admin/projects') %}active{% endif %}" href="/admin/projects"><span>◱</span> Проекты</a>
+      <a class="nav-link {% if request.url.path.startswith('/admin/activity') %}active{% endif %}" href="/admin/activity"><span>◷</span> Активность</a>
+      <a class="nav-link {% if request.url.path.startswith('/admin/settings') %}active{% endif %}" href="/admin/settings"><span>⚙</span> Настройки</a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-user">
+      <a href="/profile" class="user-mini">
+        <span class="avatar">{{ user.full_name|initials }}</span>
+        <span>
+          <strong>{{ user.full_name or user.email }}</strong>
+          <small>{{ user.role|role_label }}</small>
+        </span>
+      </a>
+      <form method="post" action="/logout">
+        {{ csrf(csrf_token) }}
+        <button class="btn btn-ghost btn-sm" type="submit">Выйти</button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="mobile-menu" @click="sidebarOpen=true" type="button">☰</button>
+      <form class="global-search" action="/search" method="get">
+        <input type="search" name="q" placeholder="Поиск клиентов, сделок, задач..." value="{{ q|default('') }}">
+        <button type="submit" aria-label="Найти">⌕</button>
+      </form>
+      <div class="topbar-actions">
+        {% if active_project %}
+        <span class="project-chip">{{ active_project.name }}</span>
+        {% endif %}
+        <a class="btn btn-ghost btn-sm" href="/profile">Профиль</a>
+      </div>
+    </header>
+
+    {% with messages = flashes %}
+      {% if messages %}
+      <div class="flash-stack">
+        {% for item in messages %}
+        <div class="flash flash-{{ item.category }}">{{ item.message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+      <span>Custom-CRM · {{ now().year if now is defined else '2026' }}</span>
+      <span>Локальная универсальная CRM</span>
+    </footer>
+  </div>
+</div>
+<script src="/static/vendor/alpine.min.js" defer></script>
+<script src="/static/js/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "macros.html" import client_badge, pagination %}
+{% block title %}Клиенты · {{ app_name }}{% endblock %}
+{% block content %}
+{% set can_edit = user.role in ['admin', 'manager'] %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">CRM</div>
+    <h1>Клиенты</h1>
+    <p class="muted">База контактов проекта «{{ active_project.name }}».</p>
+  </div>
+  <div class="page-actions">
+    {% if can_edit %}<a class="btn btn-primary" href="/clients/new">+ Новый клиент</a>{% endif %}
+    <a class="btn btn-ghost" href="/clients?archived={{ 'false' if archived else 'true' }}">{{ 'Активные' if archived else 'Архив' }}</a>
+  </div>
+</div>
+
+<form class="card filter-bar" method="get" action="/clients">
+  {% if archived %}<input type="hidden" name="archived" value="true">{% endif %}
+  <input type="search" name="q" value="{{ q }}" placeholder="Имя, компания, телефон...">
+  <select name="status_filter">
+    <option value="">Все статусы</option>
+    {% for value, label in status_options.items() %}
+    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit">Фильтровать</button>
+  <a class="btn btn-ghost" href="/clients{% if archived %}?archived=true{% endif %}">Сбросить</a>
+</form>
+
+<section class="card">
+  {% if clients %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Клиент</th><th>Компания</th><th>Контакт</th><th>Статус</th><th>Ответственный</th><th>Создан</th></tr>
+      </thead>
+      <tbody>
+      {% for client in clients %}
+        <tr class="{% if client.is_archived %}row-muted{% endif %}">
+          <td>
+            <a class="person" href="/clients/{{ client.id }}">
+              <span class="avatar avatar-sm">{{ client.name|initials }}</span>
+              <span><strong>{{ client.name }}</strong><small>{{ client.source or 'Источник не указан' }}</small></span>
+            </a>
+          </td>
+          <td class="muted">{{ client.company or '—' }}</td>
+          <td class="muted">{{ client.phone or client.email or '—' }}</td>
+          <td>{{ client_badge(client.status) }}</td>
+          <td class="muted">{{ client.owner.full_name if client.owner else '—' }}</td>
+          <td class="muted">{{ client.created_at|date }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(page, per_page, total) }}
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">◎</div>
+    <p>{{ 'В архиве пока нет клиентов' if archived else 'Клиентов пока нет' }}</p>
+    {% if can_edit and not archived %}<a class="btn btn-primary" href="/clients/new">Добавить первого клиента</a>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

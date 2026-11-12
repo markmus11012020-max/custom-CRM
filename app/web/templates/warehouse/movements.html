@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "macros.html" import pagination, money %}
+{% block title %}Движения склада · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Склад</div>
+    <h1>Движения склада</h1>
+    <p class="muted">История приходов, расходов и корректировок.</p>
+  </div>
+  <a class="btn btn-ghost" href="/warehouse">← Назад</a>
+</div>
+<section class="card">
+  {% if movements %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Дата</th><th>Товар</th><th>Операция</th><th class="right">Количество</th><th class="right">Себестоимость</th><th>Основание</th></tr></thead>
+    <tbody>{% for movement in movements %}<tr>
+      <td class="muted">{{ movement.created_at|datetime }}</td>
+      <td><strong>{{ movement.product.name }}</strong></td>
+      <td>{{ movement.movement_type|movement_label }}</td>
+      <td class="right {% if movement.movement_type == 'in' %}text-success{% else %}text-danger{% endif %}">{{ movement.quantity }}</td>
+      <td class="right">{{ money(movement.unit_cost) }}</td>
+      <td class="muted">{{ movement.reference or movement.comment or '—' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {{ pagination(page, per_page, total) }}
+  {% else %}<div class="empty-state"><div class="empty-icon">▦</div><p>Движений пока нет</p></div>{% endif %}
+</section>
+{% endblock %}

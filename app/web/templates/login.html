@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход · {{ app_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="login-body">
+  <div class="login-glow"></div>
+  <main class="login-card">
+    <div class="login-brand">
+      <span class="brand-mark brand-mark-lg">A</span>
+      <div>
+        <h1>Custom-CRM</h1>
+        <p>Универсальная CRM для бизнеса</p>
+      </div>
+    </div>
+    {% if error %}
+    <div class="flash flash-error">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/login" class="stack">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <input type="hidden" name="next" value="{{ next }}">
+      <label>
+        <span>Email</span>
+        <input type="email" name="email" autocomplete="username" required autofocus placeholder="admin@example.com">
+      </label>
+      <label>
+        <span>Пароль</span>
+        <input type="password" name="password" autocomplete="current-password" required placeholder="••••••••">
+      </label>
+      <button class="btn btn-primary btn-block" type="submit">Войти</button>
+    </form>
+    <p class="login-note">Доступ выдаёт администратор. Пароль хранится только в виде Argon2-хеша.</p>
+  </main>
+</body>
+</html>

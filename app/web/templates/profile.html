@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Профиль · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="person-head">
+    <span class="avatar avatar-lg">{{ user.full_name|initials }}</span>
+    <div><div class="eyebrow">Аккаунт</div><h1>{{ user.full_name or user.email }}</h1><p class="muted">{{ user.email }} · {{ user.role|role_label }}</p></div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Личные данные</h2></div>
+    <form method="post" action="/profile" class="stack">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <label><span>Полное имя</span><input type="text" name="full_name" value="{{ user.full_name }}"></label>
+      <label><span>Email</span><input type="email" name="email" value="{{ user.email }}" required></label>
+      <label><span>Новый пароль (необязательно)</span><input type="password" name="password" minlength="8" placeholder="Оставьте пустым, чтобы не менять"></label>
+      <label><span>Telegram chat_id</span><input type="text" name="telegram_chat_id" value="{{ user.telegram_chat_id }}" placeholder="123456789"></label>
+      <label class="inline-check"><input type="checkbox" name="notify_email" {% if user.notify_email %}checked{% endif %}> Email-уведомления</label>
+      <label class="inline-check"><input type="checkbox" name="notify_telegram" {% if user.notify_telegram %}checked{% endif %}> Telegram-уведомления</label>
+      <button class="btn btn-primary" type="submit">Сохранить профиль</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>API-токены</h2></div>
+    <p class="muted">Токены нужны для внешних интеграций. Показываются один раз при создании.</p>
+    <form method="post" action="/profile/tokens" class="inline-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <input type="text" name="name" placeholder="Например, Telegram-бот">
+      <button class="btn btn-secondary" type="submit">Создать токен</button>
+    </form>
+    {% if tokens %}
+    <div class="simple-list top-gap">
+      {% for token in tokens %}
+      <div class="simple-row">
+        <span><strong>{{ token.name }}</strong><small>создан {{ token.created_at|date }}{% if token.expires_at %} · до {{ token.expires_at|date }}{% endif %}</small></span>
+        <form method="post" action="/profile/tokens/{{ token.id }}/delete" data-confirm="Отозвать токен?"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="btn btn-ghost btn-sm" type="submit">Отозвать</button></form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty-state small"><p>Токенов пока нет</p></div>{% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Безопасность</h2></div>
+  <p class="muted">Пароль хранится в виде Argon2-хеша. Сессия подписана и имеет SameSite=Lax. При доступе вне localhost включите HTTPS.</p>
+</section>
+{% endblock %}

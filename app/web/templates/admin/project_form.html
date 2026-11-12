@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">Администрирование</div><h1>{{ title }}</h1><p class="muted">Проект изолирует клиентов, сделки, задачи и финансы.</p></div>
+  <a class="btn btn-ghost" href="/admin/projects">← Назад</a>
+</div>
+<form class="card form-card" method="post" action="{{ form_action }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label class="span-2"><span>Название *</span><input type="text" name="name" value="{{ project.name if project else '' }}" required></label>
+    <label><span>Код {{ '(не меняется)' if project else '*' }}</span><input type="text" name="code" value="{{ project.code if project else '' }}" {% if project %}disabled{% else %}required pattern="[a-z0-9][a-z0-9_-]*"{% endif %} placeholder="my-project"></label>
+    <label><span>Валюта</span><input type="text" name="currency" value="{{ project.currency if project else 'RUB' }}" maxlength="3"></label>
+    {% if project %}
+    <label><span>Статус</span><select name="status"><option value="active" {% if not project.is_archived %}selected{% endif %}>Активен</option><option value="archived" {% if project.is_archived %}selected{% endif %}>Архив</option></select></label>
+    <div class="detail-item"><span class="label">Владелец</span><strong>{{ project.owner.full_name if project.owner else '—' }}</strong></div>
+    {% else %}
+    <label><span>Владелец</span><select name="owner_id"><option value="{{ user.id }}">{{ user.full_name or user.email }}</option>{% for item in users %}{% if item.id != user.id %}<option value="{{ item.id }}">{{ item.full_name or item.email }}</option>{% endif %}{% endfor %}</select></label>
+    {% endif %}
+    <label class="span-2"><span>Описание</span><textarea name="description" rows="3">{{ project.description if project else '' }}</textarea></label>
+  </div>
+  <div class="form-actions"><button class="btn btn-primary" type="submit">Сохранить</button><a class="btn btn-ghost" href="/admin/projects">Отмена</a></div>
+</form>
+
+{% if project %}
+<section class="card">
+  <div class="card-head"><h2>Участники</h2></div>
+  {% if project.members %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Пользователь</th><th>Email</th><th>Роль</th><th></th></tr></thead>
+    <tbody>{% for member in project.members %}<tr>
+      <td><strong>{{ member.user.full_name or 'Без имени' }}</strong></td>
+      <td class="muted">{{ member.user.email }}</td>
+      <td>{{ member.role|role_label }}</td>
+      <td class="right">{% if project.owner_id != member.user_id %}<form method="post" action="/admin/projects/{{ project.id }}/members/{{ member.id }}/delete" data-confirm="Удалить участника?"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="icon-btn" type="submit">×</button></form>{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% endif %}
+  <form class="inline-form wrap top-gap" method="post" action="/admin/projects/{{ project.id }}/members">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <select name="user_id" required><option value="">Выберите пользователя</option>{% for item in users %}<option value="{{ item.id }}">{{ item.full_name or item.email }}</option>{% endfor %}</select>
+    <select name="role"><option value="manager">Менеджер</option><option value="viewer">Наблюдатель</option></select>
+    <button class="btn btn-secondary" type="submit">Добавить участника</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

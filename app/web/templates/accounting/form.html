@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Учёт</div>
+    <h1>{{ title }}</h1>
+    <p class="muted">Управленческая операция, не бухгалтерская проводка.</p>
+  </div>
+  <a class="btn btn-ghost" href="/accounting">← Назад</a>
+</div>
+
+<form class="card form-card" method="post" action="{{ form_action }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label>
+      <span>Тип *</span>
+      <select name="type">
+        <option value="income" {% if (transaction.type if transaction else 'income') == 'income' %}selected{% endif %}>Доход</option>
+        <option value="expense" {% if transaction and transaction.type == 'expense' %}selected{% endif %}>Расход</option>
+      </select>
+    </label>
+    <label>
+      <span>Дата *</span>
+      <input type="date" name="transaction_date" required value="{{ transaction.transaction_date if transaction else today }}">
+    </label>
+    <label>
+      <span>Сумма, ₽ *</span>
+      <input type="number" name="amount" step="0.01" min="0.01" required value="{{ transaction.amount if transaction else '' }}">
+    </label>
+    <label>
+      <span>Категория</span>
+      <input type="text" name="category" list="categories" value="{{ transaction.category if transaction else '' }}" placeholder="Оплата проекта, подрядчики...">
+      <datalist id="categories">{% for item in categories %}<option value="{{ item }}">{% endfor %}</datalist>
+    </label>
+    <label class="span-2"><span>Описание</span><input type="text" name="description" value="{{ transaction.description if transaction else '' }}" placeholder="Комментарий к операции"></label>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">{{ 'Сохранить' if transaction else 'Добавить операцию' }}</button>
+    <a class="btn btn-ghost" href="/accounting">Отмена</a>
+  </div>
+</form>
+{% endblock %}

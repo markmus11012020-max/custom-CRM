@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "macros.html" import pagination, money %}
+{% block title %}Склад · {{ app_name }}{% endblock %}
+{% block content %}
+{% set can_edit = user.role in ['admin', 'manager'] %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Операции</div>
+    <h1>Склад</h1>
+    <p class="muted">Остатки проекта «{{ active_project.name }}».</p>
+  </div>
+  <div class="page-actions">
+    {% if can_edit %}<a class="btn btn-primary" href="/warehouse/products/new">+ Товар</a>{% endif %}
+    <a class="btn btn-ghost" href="/warehouse/movements">Все движения</a>
+  </div>
+</div>
+
+<div class="stat-strip">
+  <div><span>Товары</span><strong>{{ total }}</strong></div>
+  <div><span>Стоимость склада</span><strong>{{ money(stock_value) }}</strong></div>
+  <div><span>Ниже минимума</span><strong class="{% if low_stock %}text-danger{% endif %}">{{ low_stock|length }}</strong></div>
+  <div><span>Позиций на странице</span><strong>{{ products|length }}</strong></div>
+</div>
+
+<form class="card filter-bar" method="get" action="/warehouse">
+  <input type="search" name="q" value="{{ q }}" placeholder="Название или SKU...">
+  <label class="inline-check"><input type="checkbox" name="low_only" value="true" {% if low_only %}checked{% endif %}> Только низкий остаток</label>
+  <button class="btn btn-secondary" type="submit">Фильтровать</button>
+  <a class="btn btn-ghost" href="/warehouse">Сбросить</a>
+</form>
+
+<section class="card">
+  {% if products %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Товар</th><th>SKU</th><th class="right">Остаток</th><th class="right">Минимум</th><th class="right">Себестоимость</th><th class="right">Цена</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+    <tbody>{% for product in products %}<tr class="{% if product.stock_qty <= product.min_stock %}row-danger{% endif %}">
+      <td><strong>{{ product.name }}</strong><small class="muted block">{{ product.unit }}</small></td>
+      <td class="muted">{{ product.sku or '—' }}</td>
+      <td class="right {% if product.stock_qty <= product.min_stock %}text-danger{% endif %}">{{ product.stock_qty }}</td>
+      <td class="right muted">{{ product.min_stock }}</td>
+      <td class="right">{{ money(product.cost) }}</td>
+      <td class="right">{{ money(product.price) }}</td>
+      {% if can_edit %}<td class="right"><a class="btn btn-ghost btn-sm" href="/warehouse/products/{{ product.id }}/edit">Изменить</a></td>{% endif %}
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {{ pagination(page, per_page, total) }}
+  {% else %}
+  <div class="empty-state"><div class="empty-icon">▦</div><p>Товаров пока нет</p>{% if can_edit %}<a class="btn btn-primary" href="/warehouse/products/new">Добавить товар</a>{% endif %}</div>
+  {% endif %}
+</section>
+
+<div class="grid-2-1">
+  <section class="card">
+    <div class="card-head"><h2>Последние движения</h2><a class="link" href="/warehouse/movements">Все →</a></div>
+    {% if movements %}
+    <div class="simple-list">
+      {% for movement in movements %}
+      <div class="simple-row">
+        <span><strong>{{ movement.product.name }}</strong><small>{{ movement.reference or movement.comment or 'Без комментария' }}</small></span>
+        <span class="{% if movement.movement_type == 'in' %}text-success{% else %}text-danger{% endif %}">{{ movement.movement_type|movement_label }} · {{ movement.quantity }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty-state small"><p>Движений пока нет</p></div>{% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Складская операция</h2></div>
+    {% if can_edit %}
+    <form method="post" action="/warehouse/movements" class="stack">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <select name="product_id" required>
+        <option value="">Выберите товар</option>
+        {% for product in products %}<option value="{{ product.id }}">{{ product.name }} ({{ product.stock_qty }})</option>{% endfor %}
+      </select>
+      <select name="movement_type">
+        <option value="in">Приход</option>
+        <option value="out">Расход</option>
+        <option value="adjust">Корректировка</option>
+      </select>
+      <input type="number" name="quantity" step="0.001" min="0.001" placeholder="Количество" required>
+      <input type="number" name="unit_cost" step="0.01" min="0" placeholder="Себестоимость (для прихода)">
+      <input type="text" name="reference" placeholder="Основание (заказ, поставка)">
+      <input type="text" name="comment" placeholder="Комментарий">
+      <button class="btn btn-secondary btn-block" type="submit">Провести</button>
+    </form>
+    {% else %}<p class="muted">Недостаточно прав для складских операций.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

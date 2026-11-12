@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "macros.html" import pagination %}
+{% block title %}Активность · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">Администрирование</div><h1>Журнал активности</h1><p class="muted">Действия пользователей и системных сервисов.</p></div>
+</div>
+<section class="card">
+  {% if activity %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Дата</th><th>Пользователь</th><th>Проект</th><th>Действие</th><th>Детали</th></tr></thead>
+    <tbody>{% for item in activity %}<tr>
+      <td class="muted">{{ item.created_at|datetime }}</td>
+      <td>{{ item.user.full_name if item.user else 'Система' }}</td>
+      <td class="muted">{{ item.project.name if item.project else '—' }}</td>
+      <td><span class="badge badge-info">{{ item.action }}</span></td>
+      <td class="muted">{{ item.details or '—' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {{ pagination(page, per_page, total) }}
+  {% else %}<div class="empty-state"><div class="empty-icon">◷</div><p>Событий пока нет</p></div>{% endif %}
+</section>
+{% endblock %}

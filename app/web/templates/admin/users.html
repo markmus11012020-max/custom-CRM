@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Пользователи · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Администрирование</div>
+    <h1>Пользователи</h1>
+    <p class="muted">Роли, доступ и уведомления команды.</p>
+  </div>
+  <a class="btn btn-primary" href="/admin/users/new">+ Пользователь</a>
+</div>
+
+<form class="card filter-bar" method="get" action="/admin/users">
+  <input type="search" name="q" value="{{ q }}" placeholder="Имя или email...">
+  <button class="btn btn-secondary" type="submit">Найти</button>
+  <a class="btn btn-ghost" href="/admin/users">Сбросить</a>
+</form>
+
+<section class="card">
+  {% if users %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Пользователь</th><th>Email</th><th>Роль</th><th>Telegram</th><th>Статус</th><th></th></tr></thead>
+    <tbody>{% for item in users %}<tr class="{% if not item.is_active %}row-muted{% endif %}">
+      <td><span class="person"><span class="avatar avatar-sm">{{ item.full_name|initials }}</span><strong>{{ item.full_name or 'Без имени' }}</strong></span></td>
+      <td class="muted">{{ item.email }}</td>
+      <td>{{ item.role|role_label }}</td>
+      <td class="muted">{{ item.telegram_chat_id or '—' }}</td>
+      <td>{{ 'активен' if item.is_active else 'отключён' }}</td>
+      <td class="right"><a class="btn btn-ghost btn-sm" href="/admin/users/{{ item.id }}/edit">Изменить</a></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty-state"><div class="empty-icon">♙</div><p>Пользователей нет</p></div>{% endif %}
+</section>
+{% endblock %}

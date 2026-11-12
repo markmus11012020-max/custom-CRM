@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "macros.html" import pagination, money %}
+{% block title %}Учёт · {{ app_name }}{% endblock %}
+{% block content %}
+{% set can_edit = user.role in ['admin', 'manager'] %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Финансы</div>
+    <h1>Управленческий учёт</h1>
+    <p class="muted">Доходы, расходы и прибыль проекта «{{ active_project.name }}».</p>
+  </div>
+  <div class="page-actions">
+    {% if can_edit %}<a class="btn btn-primary" href="/accounting/new">+ Операция</a>{% endif %}
+    <a class="btn btn-ghost" href="/reports/export/transactions">Экспорт CSV</a>
+  </div>
+</div>
+
+<div class="stat-strip">
+  <div><span>Доходы</span><strong class="text-success">{{ money(summary.income) }}</strong></div>
+  <div><span>Расходы</span><strong class="text-danger">{{ money(summary.expense) }}</strong></div>
+  <div><span>Прибыль</span><strong>{{ money(summary.profit) }}</strong></div>
+  <div><span>Операций</span><strong>{{ summary.count }}</strong></div>
+</div>
+
+<form class="card filter-bar" method="get" action="/accounting">
+  <select name="type_filter">
+    <option value="">Все типы</option>
+    <option value="income" {% if type_filter == 'income' %}selected{% endif %}>Доход</option>
+    <option value="expense" {% if type_filter == 'expense' %}selected{% endif %}>Расход</option>
+  </select>
+  <select name="category">
+    <option value="">Все категории</option>
+    {% for item in categories %}<option value="{{ item }}" {% if category == item %}selected{% endif %}>{{ item }}</option>{% endfor %}
+  </select>
+  <input type="date" name="date_from" value="{{ date_from }}" title="С даты">
+  <input type="date" name="date_to" value="{{ date_to }}" title="По дату">
+  <button class="btn btn-secondary" type="submit">Фильтровать</button>
+  <a class="btn btn-ghost" href="/accounting">Сбросить</a>
+</form>
+
+<section class="card">
+  {% if transactions %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Дата</th><th>Тип</th><th>Категория</th><th class="right">Сумма</th><th>Описание</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+    <tbody>{% for tx in transactions %}<tr>
+      <td class="muted">{{ tx.transaction_date|date }}</td>
+      <td><span class="badge badge-{{ 'success' if tx.type == 'income' else 'danger' }}">{{ 'Доход' if tx.type == 'income' else 'Расход' }}</span></td>
+      <td>{{ tx.category or '—' }}</td>
+      <td class="right {% if tx.type == 'income' %}text-success{% else %}text-danger{% endif %}"><strong>{{ money(tx.amount) }}</strong></td>
+      <td class="muted">{{ tx.description or '—' }}</td>
+      {% if can_edit %}<td class="right"><a class="btn btn-ghost btn-sm" href="/accounting/{{ tx.id }}/edit">Изменить</a></td>{% endif %}
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {{ pagination(page, per_page, total) }}
+  {% else %}<div class="empty-state"><div class="empty-icon">≡</div><p>Операций пока нет</p>{% if can_edit %}<a class="btn btn-primary" href="/accounting/new">Добавить операцию</a>{% endif %}</div>{% endif %}
+</section>
+{% endblock %}

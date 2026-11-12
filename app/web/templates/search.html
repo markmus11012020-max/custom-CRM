@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "macros.html" import client_badge, deal_badge, task_badge, money %}
+{% block title %}Поиск · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Поиск</div>
+    <h1>Результаты по запросу «{{ q }}»</h1>
+    <p class="muted">Клиенты, сделки и задачи активного проекта.</p>
+  </div>
+</div>
+<form class="card filter-bar" method="get" action="/search">
+  <input type="search" name="q" value="{{ q }}" placeholder="Имя, компания, телефон, сделка, задача...">
+  <label class="inline-check"><input type="checkbox" name="all_projects" value="true" {% if all_projects %}checked{% endif %}> Все доступные проекты</label>
+  <button class="btn btn-primary" type="submit">Найти</button>
+</form>
+
+<section class="card">
+  <div class="card-head"><h2>Клиенты <span class="count">{{ clients|length }}</span></h2></div>
+  {% if clients %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Клиент</th><th>Компания</th><th>Статус</th></tr></thead>
+    <tbody>{% for client in clients %}<tr>
+      <td><a href="/clients/{{ client.id }}">{{ client.name }}</a></td>
+      <td class="muted">{{ client.company or '—' }}</td>
+      <td>{{ client_badge(client.status) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty-state"><div class="empty-icon">◎</div><p>Клиенты не найдены</p></div>{% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Сделки <span class="count">{{ deals|length }}</span></h2></div>
+  {% if deals %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Сделка</th><th>Этап</th><th class="right">Сумма</th></tr></thead>
+    <tbody>{% for deal in deals %}<tr>
+      <td><a href="/deals/{{ deal.id }}">{{ deal.title }}</a></td>
+      <td>{{ deal_badge(deal.stage) }}</td>
+      <td class="right">{{ money(deal.amount) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty-state"><div class="empty-icon">◫</div><p>Сделки не найдены</p></div>{% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Задачи <span class="count">{{ tasks|length }}</span></h2></div>
+  {% if tasks %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead>
+    <tbody>{% for task in tasks %}<tr>
+      <td><a href="/tasks/{{ task.id }}/edit">{{ task.title }}</a></td>
+      <td class="{% if task.due_at|is_overdue %}text-danger{% endif %}">{{ task.due_at|datetime }}</td>
+      <td>{{ task_badge(task) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty-state"><div class="empty-icon">✓</div><p>Задачи не найдены</p></div>{% endif %}
+</section>
+{% endblock %}

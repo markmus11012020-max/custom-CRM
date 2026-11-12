@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "macros.html" import payment_badge, pagination, money %}
+{% block title %}Платежи · {{ app_name }}{% endblock %}
+{% block content %}
+{% set can_edit = user.role in ['admin', 'manager'] %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Финансы</div>
+    <h1>Платежи и счета</h1>
+    <p class="muted">Оплаты, счета и ссылки Robokassa проекта «{{ active_project.name }}».</p>
+  </div>
+  <div class="page-actions">
+    {% if can_edit %}<a class="btn btn-primary" href="/payments/new">+ Новый счёт</a>{% endif %}
+    <a class="btn btn-ghost" href="/reports/export/payments">Экспорт CSV</a>
+  </div>
+</div>
+
+<form class="card filter-bar" method="get" action="/payments">
+  <select name="status_filter">
+    <option value="">Все статусы</option>
+    {% for value in ['pending', 'paid', 'failed', 'refunded', 'canceled'] %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ value|status_label }}</option>{% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit">Фильтровать</button>
+  <a class="btn btn-ghost" href="/payments">Сбросить</a>
+</form>
+
+<section class="card">
+  {% if payments %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Счёт</th><th>Клиент</th><th>Сделка</th><th class="right">Сумма</th><th>Метод</th><th>Статус</th><th>Создан</th></tr></thead>
+    <tbody>{% for payment in payments %}<tr>
+      <td><a href="/payments/{{ payment.id }}"><strong>№{{ payment.id }}</strong></a><small class="muted block">{{ payment.description or 'Без описания' }}</small></td>
+      <td class="muted">{{ payment.client.name if payment.client else '—' }}</td>
+      <td class="muted">{{ payment.deal.title if payment.deal else '—' }}</td>
+      <td class="right"><strong>{{ money(payment.amount) }}</strong></td>
+      <td>{{ 'Robokassa' if payment.method == 'robokassa' else 'Вручную' }}</td>
+      <td>{{ payment_badge(payment.status) }}</td>
+      <td class="muted">{{ payment.created_at|date }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {{ pagination(page, per_page, total) }}
+  {% else %}
+  <div class="empty-state"><div class="empty-icon">₽</div><p>Счетов пока нет</p>{% if can_edit %}<a class="btn btn-primary" href="/payments/new">Создать счёт</a>{% endif %}</div>
+  {% endif %}
+</section>
+{% endblock %}

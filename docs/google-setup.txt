@@ -1,0 +1,73 @@
+НАСТРОЙКА GOOGLE ДЛЯ CUSTOM-CRM
+
+1. GOOGLE CLOUD PROJECT
+
+Откройте https://console.cloud.google.com/
+Создайте проект или используйте существующий.
+В разделе APIs & Services -> Library включите:
+  Google Drive API
+  Google Docs API
+  Google Sheets API
+
+2. СЕРВИСНЫЙ АККАУНТ
+
+IAM & Admin -> Service Accounts -> Create Service Account.
+Создайте ключ JSON и положите его в:
+  secrets/service_account.json
+В JSON найдите client_email. Это адрес сервисного аккаунта.
+Например:
+  backend@excel-factory-514506.iam.gserviceaccount.com
+
+3. OAuth2 КЛИЕНТ
+
+APIs & Services -> Credentials -> Create Credentials -> OAuth client ID.
+Тип: Desktop app.
+Скачайте JSON и положите его в:
+  secrets/client_secret.json
+В разделе OAuth consent screen добавьте свой аккаунт как тестового пользователя.
+В Authorized redirect URIs добавьте:
+  http://localhost:8765/
+
+Если OAuth-приложение остаётся в статусе Testing, refresh token может
+жить 7 дней. Для постоянной работы переведите приложение в Production
+или повторяйте вход.
+
+4. ПАПКА И ТАБЛИЦА
+
+Создайте папку custom-CRM в Google Drive.
+Откройте доступ к папке сервисному аккаунту с ролью Editor.
+Создайте Google Таблицу для отчётов и также откройте доступ сервисному
+аккаунту с ролью Editor.
+ID таблицы укажите в .env:
+  REPORT_SPREADSHEET_ID=1-TndvYKJPHw8wv8fTjUIJs45FJkQJswUrh2STKzzi2M
+
+Автоматическое создание папки и выдача доступа:
+  python -m app.google.bootstrap --folder custom-CRM
+или кнопка "Создать/проверить папку" в разделе Настройки.
+
+5. OAuth2 ВХОД
+
+Локально:
+  python -m app.google.oauth_user --login
+В Docker:
+  docker compose run --rm -p 8765:8765 app python -m app.google.oauth_user --login
+
+Откройте напечатанную ссылку, подтвердите доступ.
+Токен сохранится в secrets/token.json.
+
+6. ПРОВЕРКА
+
+Сервисный аккаунт:
+  python -m app.google.service_account --list
+
+OAuth2:
+  python -m app.google.oauth_user --status
+  python -m app.google.oauth_user --create-test
+
+7. ТИПОВЫЕ ОШИБКИ
+
+403 Forbidden — папка или таблица не расшарена сервисному аккаунту.
+404 Not Found — неверный ID папки или таблицы.
+redirect_uri_mismatch — добавьте точный URI http://localhost:8765/ в OAuth-клиент.
+Token has been expired or revoked — повторите OAuth2-вход.
+Google Sheets API has not been used — включите API в Google Cloud.

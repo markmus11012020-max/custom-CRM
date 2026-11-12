@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "macros.html" import pagination %}
+{% block title %}Отчёты · {{ app_name }}{% endblock %}
+{% block content %}
+{% set can_edit = user.role in ['admin', 'manager'] %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Аналитика</div>
+    <h1>Отчёты</h1>
+    <p class="muted">Google Таблицы, AI-резюме и автоматические расписания.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-ghost" href="/reports/export/clients">Клиенты CSV</a>
+    <a class="btn btn-ghost" href="/reports/export/deals">Сделки CSV</a>
+    <a class="btn btn-ghost" href="/reports/export/tasks">Задачи CSV</a>
+  </div>
+</div>
+
+<div class="grid-2-1">
+  <section class="card">
+    <div class="card-head"><h2>Создать отчёт</h2></div>
+    {% if can_edit %}
+    <form method="post" action="/reports/generate" class="stack">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <label><span>Тип отчёта</span>
+        <select name="report_type">
+          {% for value, label in report_types.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <div class="form-row">
+        <label><span>С даты</span><input type="date" name="date_from"></label>
+        <label><span>По дату</span><input type="date" name="date_to"></label>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">Сгенерировать в Google Таблицу</button>
+    </form>
+    {% else %}<p class="muted">Недостаточно прав для создания отчётов.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Google</h2><a class="link" href="/admin/settings">Настройки →</a></div>
+    <div class="status-list">
+      <div class="status-row"><span>Сервисный аккаунт</span>{{ 'готов' if service_account.file_exists else 'нет ключа' }}</div>
+      <div class="status-row"><span>OAuth2 пользователя</span>{{ 'подключён' if oauth.valid else 'не подключён' }}</div>
+      <div class="status-row"><span>Рабочая папка</span>{{ 'задана' if (settings.google_drive_folder_id or folder_id) else 'не задана' }}</div>
+      <div class="status-row"><span>Таблица отчётов</span>{{ 'задана' if settings.report_spreadsheet_id else 'не задана' }}</div>
+    </div>
+    {% if can_edit %}
+    <form method="post" action="/admin/settings/google/bootstrap" class="stack top-gap">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+      <button class="btn btn-secondary btn-block" type="submit">Создать/проверить папку</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>История отчётов</h2><span class="count">{{ total }}</span></div>
+  {% if reports %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Дата</th><th>Тип</th><th>Период</th><th>Статус</th><th>Ссылка</th></tr></thead>
+    <tbody>{% for report in reports %}<tr>
+      <td class="muted">{{ report.created_at|datetime }}</td>
+      <td><a href="/reports/{{ report.id }}"><strong>{{ report.report_type|report_type_label }}</strong></a></td>
+      <td class="muted">{{ report.period_from|date }} — {{ report.period_to|date }}</td>
+      <td>{% if report.spreadsheet_url %}<span class="badge badge-success">готов</span>{% else %}<span class="badge badge-warning">{{ report.status }}</span>{% endif %}</td>
+      <td>{% if report.spreadsheet_url %}<a href="{{ report.spreadsheet_url }}" target="_blank" rel="noopener">Открыть</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {{ pagination(page, per_page, total) }}
+  {% else %}<div class="empty-state"><div class="empty-icon">↗</div><p>Отчётов пока нет</p></div>{% endif %}
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Расписания</h2></div>
+  {% if schedules %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Тип</th><th>Cron</th><th>Каналы</th><th>Следующий запуск</th><th>Статус</th><th></th></tr></thead>
+    <tbody>{% for schedule in schedules %}<tr>
+      <td>{{ schedule.report_type|report_type_label }}</td>
+      <td><code>{{ schedule.cron_expression }}</code></td>
+      <td class="muted">{{ schedule.channels }}</td>
+      <td class="muted">{{ schedule.next_run_at|datetime }}</td>
+      <td>{{ 'активно' if schedule.is_active else 'выключено' }}</td>
+      <td class="right">
+        {% if can_edit %}
+        <form method="post" action="/reports/schedules/{{ schedule.id }}/run" class="inline"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="btn btn-ghost btn-sm" type="submit">Запустить</button></form>
+        <form method="post" action="/reports/schedules/{{ schedule.id }}/toggle" class="inline"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="btn btn-ghost btn-sm" type="submit">{{ 'Выключить' if schedule.is_active else 'Включить' }}</button></form>
+        <form method="post" action="/reports/schedules/{{ schedule.id }}/delete" class="inline" data-confirm="Удалить расписание?"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="icon-btn" type="submit">×</button></form>
+        {% endif %}
+      </td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty-state small"><p>Расписаний пока нет</p></div>{% endif %}
+
+  {% if can_edit %}
+  <form class="inline-form wrap top-gap" method="post" action="/reports/schedules">
+    <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <select name="report_type">{% for value, label in report_types.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+    <input type="text" name="cron_expression" value="0 9 * * *" placeholder="0 9 * * *" title="Cron-выражение">
+    <input type="text" name="recipients_email" placeholder="email1@example.com, email2@example.com">
+    <input type="text" name="recipients_telegram" placeholder="Telegram chat_id">
+    <select name="channels"><option value="email">Email</option><option value="telegram">Telegram</option><option value="email,telegram">Email + Telegram</option></select>
+    <button class="btn btn-secondary" type="submit">Добавить расписание</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

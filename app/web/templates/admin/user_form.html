@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">Администрирование</div><h1>{{ title }}</h1><p class="muted">Пароль должен быть не короче 8 символов.</p></div>
+  <a class="btn btn-ghost" href="/admin/users">← Назад</a>
+</div>
+<form class="card form-card" method="post" action="{{ form_action }}">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <div class="form-grid">
+    <label><span>Email *</span><input type="email" name="email" required value="{{ target.email if target else '' }}"></label>
+    <label><span>Полное имя</span><input type="text" name="full_name" value="{{ target.full_name if target else '' }}"></label>
+    <label><span>Пароль {{ '(оставьте пустым, чтобы не менять)' if target else '*' }}</span><input type="password" name="password" {% if not target %}required{% endif %} minlength="8"></label>
+    <label><span>Роль</span><select name="role">{% for value, label in role_options.items() %}<option value="{{ value }}" {% if target and target.role == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label><span>Telegram chat_id</span><input type="text" name="telegram_chat_id" value="{{ target.telegram_chat_id if target else '' }}" placeholder="123456789"></label>
+    {% if target %}
+    <label class="inline-check"><input type="checkbox" name="is_active" {% if target.is_active %}checked{% endif %}> Активен</label>
+    {% endif %}
+    <label class="inline-check"><input type="checkbox" name="notify_email" {% if not target or target.notify_email %}checked{% endif %}> Email-уведомления</label>
+    <label class="inline-check"><input type="checkbox" name="notify_telegram" {% if target and target.notify_telegram %}checked{% endif %}> Telegram-уведомления</label>
+  </div>
+  <div class="form-actions"><button class="btn btn-primary" type="submit">Сохранить</button><a class="btn btn-ghost" href="/admin/users">Отмена</a></div>
+</form>
+{% endblock %}
